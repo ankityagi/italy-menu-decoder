@@ -9,9 +9,9 @@ from a curated glossary (`glossary.js`), with no AI calls, so nothing gets made 
 
 ## How it works
 1. Photo → grayscale + contrast stretch → Tesseract (`ita`) on-device.
-2. Each line is fuzzy-matched (Levenshtein, OCR-tolerant) against ~180 dishes and their aliases.
+2. Each line is fuzzy-matched (Levenshtein, OCR-tolerant) against ~200 dishes and their aliases.
    The most specific match wins (e.g. "Pici cacio e pepe" → Cacio e pepe, plus a note on Pici).
-3. Lines not in the glossary are decoded word by word from ~320 menu terms
+3. Lines not in the glossary are decoded word by word from ~390 menu terms
    ("Filetto di maiale al pepe verde" → fillet · pork · green peppercorn sauce). Section headers
    (Primi, Secondi…) set the course.
 4. Prices are pulled from the line and compared with the typical range. S.Q. / etto / kg are flagged as priced by weight.
