@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Menu Decoder</title>
+<meta name="description" content="Offline Italian menu decoder: snap a trattoria menu and see what each dish is.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Menu">
+<meta name="theme-color" content="#f6efe3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1814" media="(prefers-color-scheme: dark)">
+<style>
+:root {
+  --bg: #f6efe3; --paper: #fffaf1; --ink: #2a211a; --muted: #7a6a5c; --line: #e6d9c5;
+  --accent: #b5452a; --accent-ink: #fff; --olive: #4d6b2f; --olive-bg: #e8efd9;
+  --gold: #8a6410; --gold-bg: #f6e9c6; --red-bg: #f7dcd3; --gray-bg: #efe8dc;
+  --c-antipasto: #8a6410; --c-primo: #b5452a; --c-secondo: #6b3b6e; --c-contorno: #4d6b2f;
+  --c-dolce: #b0436c; --c-pizza: #c0611b; --c-bevanda: #2f5f7a; --c-altro: #7a6a5c;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1814; --paper: #26201a; --ink: #f1e8db; --muted: #a8998a; --line: #3a3128;
+    --accent: #e0714f; --accent-ink: #1c1814; --olive: #a9c97f; --olive-bg: #2c3522;
+    --gold: #e2b85a; --gold-bg: #3b311b; --red-bg: #45251c; --gray-bg: #322a22;
+    --c-antipasto: #e2b85a; --c-primo: #e98a6c; --c-secondo: #c79ad0; --c-contorno: #a9c97f;
+    --c-dolce: #ec8fb2; --c-pizza: #f0a060; --c-bevanda: #86bcd9; --c-altro: #a8998a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1c1814; --paper: #26201a; --ink: #f1e8db; --muted: #a8998a; --line: #3a3128;
+  --accent: #e0714f; --accent-ink: #1c1814; --olive: #a9c97f; --olive-bg: #2c3522;
+  --gold: #e2b85a; --gold-bg: #3b311b; --red-bg: #45251c; --gray-bg: #322a22;
+  --c-antipasto: #e2b85a; --c-primo: #e98a6c; --c-secondo: #c79ad0; --c-contorno: #a9c97f;
+  --c-dolce: #ec8fb2; --c-pizza: #f0a060; --c-bevanda: #86bcd9; --c-altro: #a8998a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 var(--sans); padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+.top { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px);
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.brand { font: 600 22px/1 var(--serif); letter-spacing: .2px; margin: 0; flex: 1; white-space: nowrap; }
+.brand span { color: var(--accent); font-style: italic; }
+select, input[type=search], textarea { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+select { padding: 7px 10px; max-width: 100%; }
+.pill { font-size: 12px; padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--olive-bg); color: var(--olive); }
+.pill.wait { background: var(--gold-bg); color: var(--gold); }
+.pill.warn { background: var(--red-bg); color: var(--accent); }
+main { max-width: 680px; margin: 0 auto; padding: 16px; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 10px 14px; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: 600 16px var(--sans); cursor: pointer; text-align: center; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; grid-column: 1 / -1; min-height: 64px; font-size: 18px; }
+.btn.small { min-height: 38px; font-size: 14px; border-radius: 10px; padding: 6px 12px; }
+.hint { color: var(--muted); font-size: 13.5px; margin: 10px 2px 0; }
+.hint a { color: var(--accent); }
+#scan-status { margin-top: 14px; }
+.track { height: 6px; background: var(--line); border-radius: 6px; overflow: hidden; }
+#bar { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+#scan-msg { font-size: 13px; color: var(--muted); margin-top: 6px; }
+#preview { width: 100%; max-height: 180px; object-fit: cover; border-radius: 12px; margin-top: 12px; border: 1px solid var(--line); }
+details#text-wrap { margin-top: 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
+details#text-wrap > summary { padding: 12px 14px; cursor: pointer; font-weight: 600; font-size: 14.5px; }
+#text-wrap .inner { padding: 0 12px 12px; }
+textarea { width: 100%; min-height: 170px; padding: 10px; font: 15px/1.5 ui-monospace, Menlo, monospace; resize: vertical; }
+.row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.summary { color: var(--muted); font-size: 13.5px; margin: 18px 2px 4px; }
+.section { font: 600 19px var(--serif); margin: 22px 2px 6px; text-transform: capitalize; }
+.section .muted { font: 400 13px var(--sans); text-transform: none; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; margin: 10px 0; }
+.card.faint { opacity: .7; }
+.card header { display: flex; align-items: baseline; gap: 8px; justify-content: space-between; }
+.card h3 { font: 600 18px/1.25 var(--serif); margin: 0; }
+.written { font-size: 13px; color: var(--muted); font-style: italic; margin-bottom: 2px; }
+.chip { flex: none; font-size: 11.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; padding: 3px 8px; border-radius: 6px;
+  color: var(--chip); border: 1.5px solid var(--chip); }
+.c-antipasto { --chip: var(--c-antipasto); } .c-primo { --chip: var(--c-primo); } .c-secondo { --chip: var(--c-secondo); }
+.c-contorno { --chip: var(--c-contorno); } .c-dolce { --chip: var(--c-dolce); } .c-pizza { --chip: var(--c-pizza); }
+.c-bevanda { --chip: var(--c-bevanda); } .c-altro { --chip: var(--c-altro); }
+.badges { margin-top: 7px; font-size: 13px; }
+.badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-weight: 600; font-size: 12.5px; }
+.badge.locals { background: var(--olive-bg); color: var(--olive); }
+.badge.locals.strong { background: var(--olive); color: var(--paper); }
+.badge.trap { background: var(--red-bg); color: var(--accent); }
+.badge.away { background: var(--gold-bg); color: var(--gold); }
+.badge.meh { background: var(--gray-bg); color: var(--muted); }
+.desc { margin: 8px 0 0; }
+.tip { margin: 8px 0 0; font-size: 14.5px; background: var(--gold-bg); color: var(--ink); padding: 8px 10px; border-radius: 10px; }
+.tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 12.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+.price { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13.5px; align-items: center; }
+.typ { color: var(--muted); }
+.menu-price { font-weight: 700; }
+.p-low { color: var(--olive); } .p-fair { color: var(--ink); } .p-high { color: var(--accent); }
+.also { margin-top: 8px; font-size: 14px; } .also summary { cursor: pointer; color: var(--accent); }
+.muted { color: var(--muted); }
+.empty { color: var(--muted); text-align: center; padding: 24px 8px; }
+.filters { display: flex; gap: 8px; }
+.filters input { flex: 1; min-width: 0; padding: 10px 12px; }
+#history { margin-top: 18px; } #history h2 { font: 600 15px var(--sans); color: var(--muted); margin: 0 2px 6px; }
+#history ul { list-style: none; margin: 0; padding: 0; }
+#history button { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 2px; font: 14px var(--sans); color: var(--ink); cursor: pointer; }
+nav.tabs { position: fixed; bottom: 0; left: 0; right: 0; z-index: 6; display: flex; background: var(--paper); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+.tab { flex: 1; border: 0; background: none; padding: 9px 4px 10px; font: 600 12px var(--sans); color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; }
+.tab .ic { font-size: 20px; line-height: 1; }
+.tab[aria-selected="true"] { color: var(--accent); }
+input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1 class="brand">Menu <span>Decoder</span></h1>
+  <span id="offline" class="pill wait">Checking offline…</span>
+  <select id="region" aria-label="Where are you eating?"></select>
+</div>
+
+<main>
+  <section id="panel-menu" class="panel">
+    <div class="actions">
+      <label class="btn primary" for="photo">📷 Scan a menu</label>
+      <input id="photo" type="file" accept="image/*" capture="environment">
+      <button class="btn" id="paste">📋 Paste text</button>
+      <button class="btn" onclick="document.getElementById('text-wrap').open=true;document.getElementById('text').focus()">⌨️ Type a dish</button>
+    </div>
+    <p class="hint">Everything runs on your phone, with no data used.
+      Handwriting tough to read? Use your phone's own text grabber, then <b>Paste</b>:
+      iPhone Camera → tap the <b>Live Text</b> icon → Copy All. Android: Google Lens → Text → Copy.
+      <a href="#" id="demo">Try a sample menu</a>.</p>
+
+    <div id="scan-status" hidden><div class="track"><div id="bar"></div></div><div id="scan-msg"></div></div>
+    <img id="preview" alt="Your menu photo" hidden>
+
+    <details id="text-wrap">
+      <summary>✏️ Edit text (fix OCR mistakes here)</summary>
+      <div class="inner">
+        <textarea id="text" placeholder="One dish per line, e.g.&#10;Tonnarelli cacio e pepe 12&#10;Saltimbocca alla romana 17" spellcheck="false" autocapitalize="sentences"></textarea>
+        <div class="row"><button class="btn small" id="decode">Decode</button><button class="btn small" id="clear">Clear</button></div>
+      </div>
+    </details>
+
+    <div id="results"></div>
+    <section id="history" hidden><h2>Recent menus</h2><ul id="history-list"></ul></section>
+  </section>
+
+  <section id="panel-browse" class="panel" hidden>
+    <div class="filters">
+      <input type="search" id="q" placeholder="Search dishes, e.g. cinghiale" autocomplete="off">
+      <select id="course-filter" aria-label="Course"></select>
+    </div>
+    <p class="hint" id="browse-count"></p>
+    <div id="browse-list"></div>
+  </section>
+
+  <section id="panel-tips" class="panel" hidden>
+    <div id="tips-list"></div>
+  </section>
+</main>
+
+<nav class="tabs" role="tablist">
+  <button class="tab" data-tab="menu" role="tab"><span class="ic">📜</span>Menu</button>
+  <button class="tab" data-tab="browse" role="tab"><span class="ic">🔎</span>Glossary</button>
+  <button class="tab" data-tab="tips" role="tab"><span class="ic">💡</span>How to order</button>
+</nav>
+
+<script src="vendor/tesseract.min.js"></script>
+<script src="glossary.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
