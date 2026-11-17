@@ -1,7 +1,7 @@
 // Cache-first service worker: after one visit on Wi-Fi, the app never touches the network.
 // Bump CACHE when app files change. The big OCR files (vendor/) are carried over from the
 // previous cache instead of being downloaded again.
-const CACHE = 'menu-decoder-v2';
+const CACHE = 'menu-decoder-v3';
 const ASSETS = [
   './', 'index.html', 'app.js', 'glossary.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png',
   'vendor/tesseract.min.js', 'vendor/worker.min.js',
